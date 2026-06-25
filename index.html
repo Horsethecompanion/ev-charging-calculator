@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en-NZ">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Public EV Charging Cost — NZ Wholesale</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --text: #0f172a;
+      --text-light: #64748b;
+      --border: #e2e8f0;
+      --positive: #16a34a;
+      --positive-bg: #f0fdf4;
+      --highlight: #d1fae5;
+      --navy: #0f172a;
+      --accent: #2563eb;
+      /* Calculator-specific tokens */
+      --negative: #dc2626;
+      --negative-bg: #fef2f2;
+      --neutral-bar: #94a3b8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 2rem 1rem;
+    }
+    .container { max-width: 760px; margin: 0 auto; }
+
+    .header { margin-bottom: 1.5rem; }
+    .header h1 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--navy);
+    }
+    .header p {
+      color: var(--text-light);
+      font-size: 0.9rem;
+      margin-top: 0.35rem;
+      line-height: 1.5;
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      margin-bottom: 1.5rem;
+      overflow: hidden;
+    }
+
+    .card-header {
+      background: var(--navy);
+      color: white;
+      padding: 1rem 1.5rem;
+    }
+    .card-header h2 {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      opacity: 0.75;
+    }
+
+    .card-body { padding: 1.5rem; }
+
+    .fields {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem 1.5rem;
+    }
+    @media (max-width: 560px) {
+      .fields { grid-template-columns: 1fr; }
+    }
+
+    .field { display: flex; flex-direction: column; gap: 0.35rem; }
+    .field.full { grid-column: 1 / -1; }
+
+    .field label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .field label span.optional {
+      font-weight: 400;
+      color: var(--text-light);
+      font-size: 0.75rem;
+    }
+    .field label .hint {
+      display: block;
+      font-weight: 400;
+      color: var(--text-light);
+      font-size: 0.72rem;
+      margin-top: 0.15rem;
+    }
+
+    .field input,
+    .field select {
+      padding: 0.65rem 0.9rem;
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 600;
+      font-family: inherit;
+      color: var(--text);
+      background: white;
+      outline: none;
+      transition: border-color 0.2s;
+      width: 100%;
+    }
+    .field input:focus,
+    .field select:focus { border-color: var(--accent); }
+
+    .field .prefix { position: relative; }
+    .field .prefix input { padding-left: 1.6rem; }
+    .field .prefix::before {
+      content: '$';
+      position: absolute;
+      left: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-light);
+      font-weight: 600;
+      font-size: 1rem;
+      pointer-events: none;
+    }
+
+    .field .suffix { position: relative; }
+    .field .suffix input { padding-right: 2.2rem; }
+    .field .suffix::after {
+      content: attr(data-suffix);
+      position: absolute;
+      right: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-light);
+      font-weight: 600;
+      font-size: 0.9rem;
+      pointer-events: none;
+    }
+
+    /* Range slider — unique to this calculator. Same accent colour as inputs. */
+    .field input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      padding: 0;
+      border: none;
+      background: transparent;
+      height: 32px;
+      cursor: pointer;
+    }
+    .field input[type="range"]::-webkit-slider-runnable-track {
+      height: 6px;
+      background: var(--border);
+      border-radius: 3px;
+    }
+    .field input[type="range"]::-moz-range-track {
+      height: 6px;
+      background: var(--border);
+      border-radius: 3px;
+    }
+    .field input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--accent);
+      border: 3px solid white;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+      margin-top: -8px;
+      cursor: pointer;
+    }
+    .field input[type="range"]::-moz-range-thumb {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--accent);
+      border: 3px solid white;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+      cursor: pointer;
+    }
+    .field input[type="range"]:focus { outline: none; }
+    .slider-row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .slider-row input[type="range"] { flex: 1; }
+    .slider-value {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text);
+      min-width: 3.5rem;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    button.calculate {
+      width: 100%;
+      margin-top: 1.5rem;
+      padding: 0.85rem;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+    }
+    button.calculate:hover { background: #1d4ed8; }
+    button.calculate:active { transform: scale(0.99); }
+
+    .result-card { display: none; }
+    .result-card.visible { display: block; }
+
+    .result-summary {
+      padding: 1.25rem 1.5rem;
+      background: var(--positive-bg);
+      border-bottom: 1px solid var(--border);
+    }
+    .result-summary .big-number {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--positive);
+    }
+    .result-summary .label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #166534;
+      margin-top: 0.2rem;
+    }
+
+    .result-detail { padding: 1.25rem 1.5rem; }
+
+    /* Two scenario panels inside the result card */
+    .scenario-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+    }
+    @media (max-width: 560px) {
+      .scenario-grid { grid-template-columns: 1fr; }
+    }
+    .scenario {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem;
+    }
+    .scenario .scenario-title {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-light);
+      margin-bottom: 0.5rem;
+    }
+    .scenario .scenario-window {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 0.5rem;
+    }
+    .scenario .scenario-rate {
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: var(--accent);
+      font-variant-numeric: tabular-nums;
+    }
+    .scenario .scenario-rate-suffix {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-light);
+    }
+    .scenario.scenario-peak .scenario-rate { color: var(--negative); }
+
+    .detail-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem 1.5rem;
+    }
+    @media (max-width: 480px) {
+      .detail-grid { grid-template-columns: 1fr; }
+    }
+
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid #f1f5f9;
+      font-size: 0.875rem;
+    }
+    .detail-row .label { color: var(--text-light); }
+    .detail-row .value { font-weight: 600; font-variant-numeric: tabular-nums; }
+
+    .detail-row.highlight {
+      background: #fef9c3;
+      padding: 0.55rem 0.75rem;
+      border-radius: 8px;
+      border-bottom: none;
+      margin: 0.25rem 0;
+    }
+    .detail-row.highlight .label {
+      color: #713f12;
+      font-weight: 700;
+    }
+    .detail-row.highlight .value { color: #713f12; }
+
+    .detail-row.result-positive {
+      background: var(--positive-bg);
+      padding: 0.55rem 0.75rem;
+      border-radius: 8px;
+      border-bottom: none;
+      margin: 0.25rem 0;
+    }
+    .detail-row.result-positive .label {
+      color: #166534;
+      font-weight: 700;
+    }
+    .detail-row.result-positive .value {
+      color: var(--positive);
+      font-weight: 800;
+      font-size: 1.05rem;
+    }
+
+    .detail-row.spacer { height: 0.5rem; border: none; }
+
+    .scenario-divider {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-light);
+      margin: 1rem 0 0.5rem;
+      padding-bottom: 0.4rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .scenario-divider:first-child { margin-top: 0; }
+
+    .comparison-section {
+      padding: 1rem 1.5rem;
+      border-top: 1px solid var(--border);
+      background: #fafafa;
+    }
+    .comparison-section h3 {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-light);
+      margin-bottom: 0.75rem;
+    }
+
+    .bar-group { margin-bottom: 0.6rem; }
+    .bar-group .bar-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.78rem;
+      color: var(--text-light);
+      margin-bottom: 0.25rem;
+    }
+    .bar-group .bar-label span.value { font-weight: 600; color: var(--text); }
+    .bar-bg {
+      background: #e8eef7;
+      border-radius: 4px;
+      height: 18px;
+      overflow: hidden;
+    }
+    .bar-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .bar-fill.blue { background: var(--accent); }
+    .bar-fill.green { background: var(--positive); }
+    .bar-fill.red { background: var(--negative); }
+    .bar-fill.gray { background: var(--neutral-bar); }
+
+    .note {
+      padding: 1rem 1.5rem;
+      border-top: 1px solid var(--border);
+      font-size: 0.72rem;
+      color: var(--text-light);
+      line-height: 1.5;
+      background: #fafafa;
+    }
+    .note strong { color: var(--text); }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <div class="header">
+      <h1>⚡ Public EV Charging Cost — NZ</h1>
+      <p>Work out what it would cost to charge an EV using only NZ wholesale power prices from the last year, if you always charged away from home. Adjust the margin to see what a public charging operator would need to charge to break even.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h2>Your EV &amp; Assumptions</h2>
+      </div>
+      <div class="card-body">
+        <div class="fields">
+          <div class="field">
+            <label for="consumption">Energy Consumption <span class="optional">(editable)</span></label>
+            <div class="field suffix" data-suffix="kWh/100km">
+              <input type="number" id="consumption" value="20" min="5" max="40" step="0.5">
+            </div>
+            <span class="hint">NZ average EV ≈ 18–22 kWh/100km</span>
+          </div>
+          <div class="field">
+            <label for="distance">Annual Distance <span class="optional">(editable)</span></label>
+            <div class="field suffix" data-suffix="km">
+              <input type="number" id="distance" value="20000" min="1000" max="100000" step="1000">
+            </div>
+            <span class="hint">NZ average ≈ 12,000–15,000 km/yr</span>
+          </div>
+          <div class="field full">
+            <label for="lineCharge">Line / Network Charge</label>
+            <div class="field suffix" data-suffix="c/kWh">
+              <input type="number" id="lineCharge" value="12" min="0" max="30" step="0.5">
+            </div>
+            <span class="hint">Defensible NZ commercial figure: 10–14 c/kWh. ComCom blended network average is ~8.7 c/kWh; commercial sites add retailer margin + levies.</span>
+          </div>
+          <div class="field full">
+            <label for="margin">Operator Profit Margin <span id="marginPctLabel" class="optional">(0%)</span></label>
+            <div class="slider-row">
+              <input type="range" id="margin" min="0" max="100" value="20" step="5">
+              <span class="slider-value" id="marginPct">20%</span>
+            </div>
+            <span class="hint">Public EV charging networks typically operate on 15–40% margin above cost. Drag to compare.</span>
+          </div>
+        </div>
+        <button class="calculate" onclick="calculate()">Calculate Charging Cost</button>
+      </div>
+    </div>
+
+    <div class="card result-card" id="resultCard">
+      <div class="card-header">
+        <h2>Results</h2>
+      </div>
+
+      <!-- Two scenario panels: 24h average vs 5-9pm peak -->
+      <div class="card-body">
+        <div class="scenario-grid">
+          <div class="scenario">
+            <div class="scenario-title">24h wholesale average</div>
+            <div class="scenario-window">North Island, all hours</div>
+            <div class="scenario-rate" id="rate24hDisplay">$0.00</div>
+            <div class="scenario-rate-suffix">/ kWh, all-in</div>
+          </div>
+          <div class="scenario scenario-peak">
+            <div class="scenario-title">5pm–9pm peak</div>
+            <div class="scenario-window">System evening peak window</div>
+            <div class="scenario-rate" id="ratePeakDisplay">$0.00</div>
+            <div class="scenario-rate-suffix">/ kWh, all-in</div>
+          </div>
+        </div>
+
+        <div class="detail-grid">
+
+          <!-- 24h scenario -->
+          <div class="detail-row" style="grid-column: 1 / -1; border: none; padding: 0;">
+            <div class="scenario-divider" style="grid-column: 1 / -1;">If you always charged at the 24h average wholesale rate</div>
+          </div>
+          <div class="detail-row">
+            <span class="label">Annual energy used</span>
+            <span class="value" id="kwh24h">0 kWh</span>
+          </div>
+          <div class="detail-row">
+            <span class="label">Wholesale cost</span>
+            <span class="value" id="wholesale24h">$0</span>
+          </div>
+          <div class="detail-row">
+            <span class="label">Line / network cost</span>
+            <span class="value" id="line24h">$0</span>
+          </div>
+          <div class="detail-row highlight">
+            <span class="label">Cost base (no margin)</span>
+            <span class="value" id="costbase24h">$0</span>
+          </div>
+          <div class="detail-row result-positive">
+            <span class="label">Price you'd pay per kWh</span>
+            <span class="value" id="perKwh24h">$0</span>
+          </div>
+          <div class="detail-row result-positive">
+            <span class="label">Annual charging cost</span>
+            <span class="value" id="annual24h">$0</span>
+          </div>
+
+          <!-- Peak scenario -->
+          <div class="detail-row" style="grid-column: 1 / -1; border: none; padding: 0;">
+            <div class="scenario-divider" style="grid-column: 1 / -1;">If you always charged during the 5–9pm evening peak</div>
+          </div>
+          <div class="detail-row">
+            <span class="label">Annual energy used</span>
+            <span class="value" id="kwhPeak">0 kWh</span>
+          </div>
+          <div class="detail-row">
+            <span class="label">Wholesale cost</span>
+            <span class="value" id="wholesalePeak">$0</span>
+          </div>
+          <div class="detail-row">
+            <span class="label">Line / network cost</span>
+            <span class="value" id="linePeak">$0</span>
+          </div>
+          <div class="detail-row highlight">
+            <span class="label">Cost base (no margin)</span>
+            <span class="value" id="costbasePeak">$0</span>
+          </div>
+          <div class="detail-row result-positive">
+            <span class="label">Price you'd pay per kWh</span>
+            <span class="value" id="perKwhPeak">$0</span>
+          </div>
+          <div class="detail-row result-positive">
+            <span class="label">Annual charging cost</span>
+            <span class="value" id="annualPeak">$0</span>
+          </div>
+
+          <!-- Cost per km summary, both -->
+          <div class="detail-row" style="grid-column: 1 / -1; border: none; padding: 0;">
+            <div class="scenario-divider" style="grid-column: 1 / -1;">Cost per kilometre</div>
+          </div>
+          <div class="detail-row">
+            <span class="label">At 24h average rate</span>
+            <span class="value" id="cpkm24h">$0/km</span>
+          </div>
+          <div class="detail-row">
+            <span class="label">At 5–9pm peak rate</span>
+            <span class="value" id="cpkmPeak">$0/km</span>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="comparison-section">
+        <h3>Cost breakdown — wholesale + line + margin</h3>
+        <div class="bar-group">
+          <div class="bar-label">
+            <span>24h average — wholesale only</span>
+            <span class="value" id="barW24Label">$0</span>
+          </div>
+          <div class="bar-bg">
+            <div class="bar-fill blue" id="barW24" style="width:0%"></div>
+          </div>
+        </div>
+        <div class="bar-group">
+          <div class="bar-label">
+            <span>24h average — line charge</span>
+            <span class="value" id="barL24Label">$0</span>
+          </div>
+          <div class="bar-bg">
+            <div class="bar-fill gray" id="barL24" style="width:0%"></div>
+          </div>
+        </div>
+        <div class="bar-group">
+          <div class="bar-label">
+            <span>24h average — operator margin</span>
+            <span class="value" id="barM24Label">$0</span>
+          </div>
+          <div class="bar-bg">
+            <div class="bar-fill green" id="barM24" style="width:0%"></div>
+          </div>
+        </div>
+        <div class="bar-group" style="margin-top: 1rem;">
+          <div class="bar-label">
+            <span>5–9pm peak — wholesale only</span>
+            <span class="value" id="barWPLabel">$0</span>
+          </div>
+          <div class="bar-bg">
+            <div class="bar-fill blue" id="barWP" style="width:0%"></div>
+          </div>
+        </div>
+        <div class="bar-group">
+          <div class="bar-label">
+            <span>5–9pm peak — line charge</span>
+            <span class="value" id="barLPLabel">$0</span>
+          </div>
+          <div class="bar-bg">
+            <div class="bar-fill gray" id="barLP" style="width:0%"></div>
+          </div>
+        </div>
+        <div class="bar-group">
+          <div class="bar-label">
+            <span>5–9pm peak — operator margin</span>
+            <span class="value" id="barMPLabel">$0</span>
+          </div>
+          <div class="bar-bg">
+            <div class="bar-fill red" id="barMP" style="width:0%"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="note">
+        <strong>How this works:</strong> The wholesale figures are computed from
+        24.7 million half-hourly dispatch prices on the NZ Electricity Authority's
+        EMI dataset (1 June 2025 – 24 June 2026, North Island, proxy prices excluded).
+        24-hour average: <strong id="wholesale24hNote">$0.00/MWh</strong>.
+        5–9pm evening-peak average: <strong id="wholesalePeakNote">$0.00/MWh</strong>
+        (<span id="peakPremiumNote">1.00×</span> the 24h average). The line/network
+        charge is the default cost-base above wholesale, currently set to
+        <strong id="lineChargeNote">12 c/kWh</strong>; a commercial public-charger
+        site typically pays 10–14 c/kWh on top of wholesale (ComCom blended network
+        average is ~8.7 c/kWh for year to 31 March 2025; commercial sites add
+        retailer margin and levies). Margin is a simple markup on the cost base.
+        Public-charging in NZ is dominated by long-trip "top-up on the road" use
+        (EECA 2023 survey: 75%), so daytime/afternoon is more representative than
+        overnight for this use-case — but the 5–9pm peak scenario is included as a
+        worst-case bound. See
+        <a href="https://www.emi.ea.govt.nz/wholesale/Reports/" target="_blank" rel="noopener">EMI wholesale reports</a>
+        and
+        <a href="https://comcom.govt.nz/regulated-industries/electricity-lines/electricity-distributor-performance-and-data/performance-summaries-for-electricity-distributors/" target="_blank" rel="noopener">ComCom distributor performance summaries</a>.
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // Headline wholesale numbers — computed from EMI dispatch data.
+    // Source: /tmp/nz_electricity/crunch.py, window 2025-06-01 → 2026-06-24 (367 days).
+    // North Island, all nodes averaged per (date, TP), proxy prices excluded.
+    // See <a href="https://www.emi.ea.govt.nz/wholesale/Reports/">EMI</a>.
+    const WHOLESALE_24H_CKWH = 7.98;   // 24h time-weighted average, c/kWh
+    const WHOLESALE_PEAK_CKWH = 9.48;  // 5pm–9pm evening peak, c/kWh
+    const PEAK_PREMIUM = WHOLESALE_PEAK_CKWH / WHOLESALE_24H_CKWH;
+
+    function fmt$(n) { return '$' + Math.round(n).toLocaleString('en-NZ'); }
+    function fmt$c(n) { return '$' + (Math.round(n * 1000) / 1000).toFixed(3); }
+    function fmtCents(n) { return (Math.round(n * 100) / 100).toFixed(2) + ' c/kWh'; }
+    function fmtPct(n) { return Math.round(n * 100) + '%'; }
+
+    // Live-update the margin label as the user drags the slider
+    const marginInput = document.getElementById('margin');
+    const marginPct = document.getElementById('marginPct');
+    const marginPctLabel = document.getElementById('marginPctLabel');
+    function syncMarginLabel() {
+      const v = parseFloat(marginInput.value) || 0;
+      marginPct.textContent = v + '%';
+      marginPctLabel.textContent = '(' + v + '%)';
+    }
+    marginInput.addEventListener('input', () => { syncMarginLabel(); calculate(); });
+    syncMarginLabel();
+
+    // Enter-to-calculate on every input
+    ['consumption', 'distance', 'lineCharge'].forEach(id => {
+      document.getElementById(id).addEventListener('keydown', e => {
+        if (e.key === 'Enter') calculate();
+      });
+    });
+
+    function calculate() {
+      const consumption = parseFloat(document.getElementById('consumption').value) || 0;
+      const distance = parseFloat(document.getElementById('distance').value) || 0;
+      const lineC = parseFloat(document.getElementById('lineCharge').value) || 0;
+      const margin = (parseFloat(marginInput.value) || 0) / 100;
+
+      if (consumption <= 0 || distance <= 0) {
+        alert('Please enter energy consumption and annual distance.');
+        return;
+      }
+
+      // Annual kWh used: distance(km) * consumption(kWh/100km) / 100
+      const kwh = distance * consumption / 100;
+
+      // Cost base per kWh: wholesale + line, both in c/kWh
+      const cb24h = WHOLESALE_24H_CKWH + lineC;
+      const cbPeak = WHOLESALE_PEAK_CKWH + lineC;
+
+      // With margin
+      const price24h = cb24h * (1 + margin);
+      const pricePeak = cbPeak * (1 + margin);
+
+      // Annual cost
+      const annual24h = price24h * kwh / 100;  // c/kWh * kWh = c, then /100 = $
+      const annualPeak = pricePeak * kwh / 100;
+
+      // Cost per km (c/kWh * kWh/100km = cents per km / 100 = $/100km? No: cents/km.)
+      // c/kWh * (consumption/100) kWh/km = c/km. Convert to $/km.
+      const cpkm24h = price24h * consumption / 100 / 100;
+      const cpkmPeak = pricePeak * consumption / 100 / 100;
+
+      // Per-component annual costs (wholesale, line, margin)
+      const w24 = WHOLESALE_24H_CKWH * kwh / 100;
+      const l24 = lineC * kwh / 100;
+      const m24 = annual24h - w24 - l24;
+      const wP = WHOLESALE_PEAK_CKWH * kwh / 100;
+      const lP = lineC * kwh / 100;
+      const mP = annualPeak - wP - lP;
+
+      // Headline: scenario panels
+      document.getElementById('rate24hDisplay').textContent = fmt$c(price24h / 100);
+      document.getElementById('ratePeakDisplay').textContent = fmt$c(pricePeak / 100);
+
+      // 24h detail
+      document.getElementById('kwh24h').textContent = Math.round(kwh).toLocaleString('en-NZ') + ' kWh';
+      document.getElementById('wholesale24h').textContent = fmt$(w24);
+      document.getElementById('line24h').textContent = fmt$(l24);
+      document.getElementById('costbase24h').textContent = fmt$(w24 + l24);
+      document.getElementById('perKwh24h').textContent = fmtCents(price24h);
+      document.getElementById('annual24h').textContent = fmt$(annual24h);
+      document.getElementById('cpkm24h').textContent = '$' + (cpkm24h).toFixed(3) + '/km';
+
+      // Peak detail
+      document.getElementById('kwhPeak').textContent = Math.round(kwh).toLocaleString('en-NZ') + ' kWh';
+      document.getElementById('wholesalePeak').textContent = fmt$(wP);
+      document.getElementById('linePeak').textContent = fmt$(lP);
+      document.getElementById('costbasePeak').textContent = fmt$(wP + lP);
+      document.getElementById('perKwhPeak').textContent = fmtCents(pricePeak);
+      document.getElementById('annualPeak').textContent = fmt$(annualPeak);
+      document.getElementById('cpkmPeak').textContent = '$' + cpkmPeak.toFixed(3) + '/km';
+
+      // Bar chart: scale to the largest of the six values
+      const maxBar = Math.max(w24, l24, m24, wP, lP, mP, 1);
+      const setBar = (id, labelId, val) => {
+        document.getElementById(id).style.width = (val / maxBar * 100) + '%';
+        document.getElementById(labelId).textContent = fmt$(val);
+      };
+      setBar('barW24', 'barW24Label', w24);
+      setBar('barL24', 'barL24Label', l24);
+      setBar('barM24', 'barM24Label', m24);
+      setBar('barWP', 'barWPLabel', wP);
+      setBar('barLP', 'barLPLabel', lP);
+      setBar('barMP', 'barMPLabel', mP);
+
+      // Footnote numbers (dynamic so the source figures update with the data window)
+      document.getElementById('wholesale24hNote').textContent = WHOLESALE_24H_CKWH.toFixed(2) + ' c/kWh';
+      document.getElementById('wholesalePeakNote').textContent = WHOLESALE_PEAK_CKWH.toFixed(2) + ' c/kWh';
+      document.getElementById('peakPremiumNote').textContent = PEAK_PREMIUM.toFixed(2) + '×';
+      document.getElementById('lineChargeNote').textContent = lineC + ' c/kWh';
+
+      // Reveal results
+      document.getElementById('resultCard').classList.add('visible');
+      document.getElementById('resultCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  </script>
+</body>
+</html>
